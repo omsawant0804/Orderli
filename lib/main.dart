@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get_navigation/get_navigation.dart';
+import 'package:orderli2/LoginCheck.dart';
 import 'package:orderli2/LoginMain.dart';
 // import 'package:fluttertoast/fluttertoast.dart';
 
@@ -24,7 +25,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Orderli',
-      home: const MyHomePage(),
+      home:wraper(),
     );
   }
 }

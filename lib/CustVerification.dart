@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 import 'package:orderli2/LoginCheck.dart';
 import 'package:orderli2/LoginMain.dart';
+import 'package:orderli2/NameField.dart';
 // import 'package:firebase_core/firebase_core.dart';
 import 'package:orderli2/Weight/Right_Animation.dart';
 import 'package:orderli2/main.dart';
@@ -33,9 +34,9 @@ class _CustVerificationState extends State<CustVerification> {
       Get.offAll(wraper());
       });
       }on FirebaseAuthException catch(e){
-      Get.snackbar('Error Occured', e.code);
+      Get.snackbar('Invalid OTP', e.code);
     }catch(e){
-      Get.snackbar('Error Occured', e.toString());
+      Get.snackbar('Invalid OTP', e.toString());
     }
   }
 

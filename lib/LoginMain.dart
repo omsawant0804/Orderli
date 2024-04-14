@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:orderli2/CustVerification.dart';
+import 'package:orderli2/NameField.dart';
 import 'package:orderli2/RestoLogin.dart';
 import 'package:orderli2/Weight/Right_Animation.dart';
 
@@ -22,17 +23,17 @@ class _MyHomePageState extends State<MyHomePage> {
         phoneNumber: '+91'+mobile.text,
           verificationCompleted: (PhoneAuthCredential credential){},
           verificationFailed: (FirebaseAuthException e){
-          Get.snackbar('Error Occured', e.code);
+          Get.snackbar('Please enter valid phone number', e.code);
           },
           codeSent: (String vid,int? token){
-          Get.to(CustVerification(vid: vid,phno: '+91 '+mobile.text,),);
+          Get.to(CustVerification(vid: vid,phno: '+91'+mobile.text,),);
           },
           codeAutoRetrievalTimeout: (vid){}
       );
     }on FirebaseAuthException catch(e){
-      Get.snackbar('Error Occured', e.code);
+      Get.snackbar('Please enter valid Phone number', e.code);
     }catch(e){
-      Get.snackbar('Error Occured', e.toString());
+      Get.snackbar('Please enter valid Phone number', e.toString());
     }
   }
   @override
@@ -180,21 +181,6 @@ class _MyHomePageState extends State<MyHomePage> {
                               padding: EdgeInsetsDirectional.fromSTEB(10, 0, 10, 5),
                               child: TextFormField(
                                 controller: mobile,
-                                validator: (val){
-                                  if(mobile.text.length != 10){
-                                    // Tost---> for showing error
-                                    // Fluttertoast.showToast(msg: "Please enter valid number",
-                                    // toastLength: Toast.LENGTH_LONG,
-                                    //   gravity: ToastGravity.TOP,
-                                    //   backgroundColor: Colors.red,
-                                    //   textColor: Colors.white,
-                                    //   timeInSecForIosWeb: 2,
-                                    //   fontSize: 18,
-                                    // );
-                                    return "Please enter valid number";
-                                  }
-                                  return null;
-                                },
                                 autofocus: true,
                                 obscureText: false,
                                 decoration: InputDecoration(
@@ -284,11 +270,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             ),
                           ),
                           onPressed: ()async{
-                            if(formKey.currentState!.validate()){
-                              // Navigator.of(context).push(Right_Animation(child: CustVerification(),
-                              //     direction: AxisDirection.left));
-                              SendCode();
-                            }
+                            SendCode();
 
                           },
                         ),
