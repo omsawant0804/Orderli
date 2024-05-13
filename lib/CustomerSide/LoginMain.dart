@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:orderli2/CustVerification.dart';
-import 'package:orderli2/NameField.dart';
-import 'package:orderli2/RestoLogin.dart';
+import 'package:orderli2/CustomerSide/CustVerification.dart';
+import 'package:orderli2/CustomerSide/NameField.dart';
+import 'package:orderli2/RestoSide/RestoLogin.dart';
 import 'package:orderli2/Weight/Right_Animation.dart';
 
 

@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:orderli2/CustomerHome.dart';
-import 'package:orderli2/LoginMain.dart';
-import 'package:orderli2/RestoHome.dart';
+import 'package:orderli2/CustomerSide/CustomerHome.dart';
+import 'package:orderli2/CustomerSide/LoginMain.dart';
+import 'package:orderli2/RestoSide/RestoHome.dart';
 
 class wraper extends StatefulWidget {
   const wraper({super.key});
@@ -22,9 +22,9 @@ class _wraperState extends State<wraper> {
             if(snapshot.data?.phoneNumber != null){
               return CustHome();
             }else if(snapshot.data?.email!=null){
-              return RestoHome();
+              return RestaurantHomePage();
             }else{
-              return MyHomePage();
+              return const MyHomePage();
             }
           }
       ),

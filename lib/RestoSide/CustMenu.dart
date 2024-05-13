@@ -1,0 +1,339 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+void main() {
+  runApp(MaterialApp(
+    home: CustomerMenuPage(),
+  ));
+}
+
+class CustomerMenuPage extends StatefulWidget {
+  @override
+  _CustomerMenuPageState createState() => _CustomerMenuPageState();
+}
+
+class _CustomerMenuPageState extends State<CustomerMenuPage> {
+  Map<String, int> _selectedItems = {};
+  Map<String, double> _itemPrices = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchItemPrices();
+  }
+
+  void _fetchItemPrices() async {
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('Restaurant')
+        .doc('restaurantId123') // Replace with actual restaurant ID
+        .collection('Menu')
+        .get();
+
+    querySnapshot.docs.forEach((document) {
+      Map<String, dynamic> data = document.data() as Map<String, dynamic>;
+      _itemPrices[data['itemName']] = data['price'].toDouble();
+    });
+
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Menu'),
+      ),
+      body: _itemPrices.isEmpty
+          ? Center(child: CircularProgressIndicator())
+          : StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('restaurants')
+            .doc('restaurantId123') // Replace with actual restaurant ID
+            .collection('menu')
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else {
+            return ListView.builder(
+              itemCount: snapshot.data!.docs.length,
+              itemBuilder: (context, index) {
+                DocumentSnapshot document = snapshot.data!.docs[index];
+                Map<String, dynamic> data =
+                document.data() as Map<String, dynamic>;
+                return _buildMenuItemCard(document.reference, data);
+              },
+            );
+          }
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          _showTotalDialog(context);
+        },
+        child: Icon(Icons.shopping_cart, color: Colors.white),
+        backgroundColor: Color(0xFFEF6129),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  Widget _buildMenuItemCard(
+      DocumentReference documentRef, Map<String, dynamic> data) {
+    MenuItem menuItem = MenuItem.fromData(data);
+
+    return Card(
+      child: Column(
+        children: [
+          SizedBox(
+            height: 200,
+            width: double.infinity,
+            child: Image.network(
+              menuItem.imageUrl,
+              fit: BoxFit.cover,
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      menuItem.itemName,
+                      style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      menuItem.description,
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Price: ₹${menuItem.price.toStringAsFixed(2)}',
+                      style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.remove),
+                    onPressed: () {
+                      _decrementItem(menuItem);
+                    },
+                  ),
+                  Text('${_selectedItems[menuItem.itemName] ?? 0}'),
+                  IconButton(
+                    icon: Icon(Icons.add),
+                    onPressed: () {
+                      _incrementItem(menuItem);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _incrementItem(MenuItem item) {
+    setState(() {
+      if (_selectedItems.containsKey(item.itemName)) {
+        _selectedItems[item.itemName] = _selectedItems[item.itemName]! + 1;
+      } else {
+        _selectedItems[item.itemName] = 1;
+      }
+    });
+  }
+
+  void _decrementItem(MenuItem item) {
+    setState(() {
+      if (_selectedItems.containsKey(item.itemName)) {
+        if (_selectedItems[item.itemName]! > 0) {
+          _selectedItems[item.itemName] = _selectedItems[item.itemName]! - 1;
+        }
+      }
+    });
+  }
+
+  double _calculateTotal() {
+    double total = 0.0;
+    _selectedItems.forEach((itemName, count) {
+      total += _itemPrices[itemName]! * count;
+    });
+    return total;
+  }
+
+  void _showTotalDialog(BuildContext context) {
+    double totalPrice = _calculateTotal();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          content: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total: ₹${totalPrice.toStringAsFixed(2)}',
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showOrderSummaryBottomSheet(context, totalPrice);
+                },
+                child: Text('Next >>'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showOrderSummaryBottomSheet(BuildContext context, double totalPrice) {
+    double totalAmount = totalPrice;
+    int selectedTable = 1;
+    String additionalNote = '';
+
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return SingleChildScrollView(
+              child: Container(
+                padding: EdgeInsets.all(20.0),
+                height: MediaQuery.of(context).size.height * 0.8, // Set a fixed height
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Order Summary',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 20),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: _selectedItems.entries.map((entry) {
+                            String itemName = entry.key;
+                            int count = entry.value;
+                            double price = _itemPrices[itemName]!;
+                            double itemTotal = count * price;
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('$itemName x $count'),
+                                Text('Price: ₹$price'),
+                                Text('Total: ₹${itemTotal.toStringAsFixed(2)}'),
+                                SizedBox(height: 10),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    Divider(),
+                    Text(
+                      'Total Amount: ₹${totalAmount.toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 20),
+                    Text(
+                      'Select Table',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 10),
+                    DropdownButton<int>(
+                      value: selectedTable,
+                      onChanged: (newValue) {
+                        setState(() {
+                          selectedTable = newValue!;
+                        });
+                      },
+                      items: List.generate(
+                        10,
+                            (index) => DropdownMenuItem<int>(
+                          value: index + 1,
+                          child: Text('Table ${index + 1}'),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    TextField(
+                      onChanged: (value) {
+                        additionalNote = value;
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Additional Note (Optional)',
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // Handle placing the order here
+                          setState(() {
+                            // Reset all values
+                            _selectedItems.clear();
+                            selectedTable = 1;
+                            additionalNote = '';
+                          });
+                          Navigator.pop(context); // Close the bottom sheet
+                        },
+                        child: Text(
+                          'Place Orde',
+                          style: TextStyle(color: Colors.white), // Set text color
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFFEF6129), // Set background color
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class MenuItem {
+  final String itemName;
+  final String description;
+  final double price;
+  final String imageUrl;
+
+  MenuItem({
+    required this.itemName,
+    required this.description,
+    required this.price,
+    required this.imageUrl,
+  });
+
+  factory MenuItem.fromData(Map<String, dynamic> data) {
+    return MenuItem(
+      itemName: data['itemName'],
+      description: data['description'],
+      price: data['price'].toDouble(),
+      imageUrl: data['imageUrl'],
+    );
+  }
+}

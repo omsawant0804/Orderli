@@ -1,6 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:orderli2/CustomerHome.dart';
+import 'package:orderli2/CustomerSide/CustomerHome.dart';
+import 'package:orderli2/Weight/CustomerBackend.dart';
 import 'package:orderli2/Weight/Right_Animation.dart';
 
 class NameField extends StatefulWidget {
@@ -12,6 +14,9 @@ class NameField extends StatefulWidget {
 
 class _NameFieldState extends State<NameField> {
   TextEditingController name =TextEditingController();
+  final CustBackend _userService = CustBackend();
+  String? phno=FirebaseAuth.instance.currentUser?.phoneNumber.toString();
+  // AuthService _auth=AuthService();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -135,8 +140,8 @@ class _NameFieldState extends State<NameField> {
                       if(name.text.isEmpty){
                         Get.snackbar("Error","Enter Name field!");
                       }else{
-                        Navigator.of(context).push(Right_Animation(child: CustHome(),
-                            direction: AxisDirection.left));
+                        // _auth.storeUserData(FirebaseAuth.instance.currentUser?.phoneNumber.toString(), name.text.toString());
+                        _userService.addUser(name.text.toString(),phno);
                       }
 
                     },
