@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:orderli2/RestoSide/RestoProfile.dart';
+import 'package:orderli2/RestoSide/RestoSetting.dart';
 import 'package:orderli2/Weight/Right_Animation.dart';
 
 // menu all operations in this file...
@@ -30,6 +32,8 @@ class MenuItem {
     };
   }
 }
+
+
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -114,12 +118,14 @@ class AddMenuItemScreen extends StatefulWidget {
 }
 
 class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
+  final user = FirebaseAuth.instance.currentUser;
   late File _imageFile = File(''); // Initialize with an empty file path
   final TextEditingController _itemNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final FirestoreService _firestoreService = FirestoreService();
-  String restoId="restaurantId123";
+  // String restoId="restaurantId123";
+  String restoId="";
 
   // Function to pick an image from the gallery
   Future<void> _pickImage() async {
@@ -156,6 +162,13 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
       print("Error uploading image: $e");
       throw e; // Rethrow the error for further handling if needed
     }
+  }
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    restoId=user!.uid.toString();
+    print(restoId);
   }
 
   Widget _buildImageWidget() {

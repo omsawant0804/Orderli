@@ -5,18 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class CustBackend {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  // Future<bool> checkPhoneNumberExists(String? phoneNumber) async {
-  //   try {
-  //     QuerySnapshot userSnapshot = await _firestore
-  //         .collection('User')
-  //         .where('phnoNumber', isEqualTo: phoneNumber)
-  //         .get();
-  //     return userSnapshot.docs.isNotEmpty;
-  //   } catch (error) {
-  //     print('Error checking phone number: $error');
-  //     return false; // Return false in case of an error
-  //   }
-  // }
 
   Future<bool> checkCurrentUserExists() async {
     try {

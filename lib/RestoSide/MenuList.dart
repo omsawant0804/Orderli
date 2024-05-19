@@ -1,10 +1,12 @@
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:orderli2/RestoSide/AddMenu.dart';
 import 'package:orderli2/RestoSide/RestoProfile.dart';
+import 'package:orderli2/RestoSide/RestoSetting.dart';
 import 'package:orderli2/Weight/Right_Animation.dart';
 class MenuListPage extends StatefulWidget {
   @override
@@ -12,8 +14,17 @@ class MenuListPage extends StatefulWidget {
 }
 
 class _MenuListPageState extends State<MenuListPage> {
+  final user = FirebaseAuth.instance.currentUser;
   final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
-  String restoId="restaurantId123";
+  // String restoId="restaurantId123";
+  String restoId="";
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    restoId=user!.uid.toString();
+    print(restoId);
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(

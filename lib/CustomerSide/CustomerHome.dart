@@ -11,23 +11,36 @@ import 'package:orderli2/CustomerSide/Scan.dart';
 import 'package:orderli2/Weight/CustomerBackend.dart';
 import 'package:orderli2/Weight/Right_Animation.dart';
 
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class CustHome extends StatefulWidget {
-  const CustHome({super.key});
-
-
+  const CustHome({Key? key}) : super(key: key);
 
   @override
   State<CustHome> createState() => _CustHomeState();
 }
 
 class _CustHomeState extends State<CustHome> {
+  final String restaurantId = "";
   final user = FirebaseAuth.instance.currentUser;
   final CustBackend _userService = CustBackend();
-  final FirebaseFirestore _firestore=FirebaseFirestore.instance;
   Map<String, dynamic>? userData;
-  String name="userName";
-  String Phno="xxx-xxx-xxxx";
+  String name = "userName";
+  String Phno = "xxx-xxx-xxxx";
   final TextEditingController _name = TextEditingController();
+  late Stream<QuerySnapshot> _ordersStream;
+  final FirestoreService firestoreService=FirestoreService();
+
+
+  @override
+  void initState() {
+    super.initState();
+    Check();
+    getdata();
+    _ordersStream = firestoreService.fetchUserOrders();
+  }
 
   Check() async {
     bool phoneNumberExists = await _userService.checkCurrentUserExists();
@@ -37,39 +50,23 @@ class _CustHomeState extends State<CustHome> {
     }
   }
 
-  getdata(){
-
-    Future.delayed(Duration(seconds: 0), () async{
-      // Assuming user data is fetched here
-      userData = await _userService.getUserData();
-      setState(() {
-        // Assigning dummy data, replace with your actual implementation
-        name=userData?["Name"];
-        Phno=userData?["phnoNumber"];
-      });
+  getdata() async {
+    // Fetching user data and updating state
+    userData = await _userService.getUserData();
+    setState(() {
+      name = userData?["Name"];
+      Phno = userData?["phnoNumber"];
     });
   }
 
-
-
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    String? phno = FirebaseAuth.instance.currentUser?.phoneNumber.toString();
-      Check();
-      getdata();
-  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-      backgroundColor: Colors.white,
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(50),
         child: AppBar(
           title: Padding(
-            padding: EdgeInsets.only(left: 0), // Adjust the left padding as needed
+            padding: EdgeInsets.only(left: 0),
             child: Text(
               'Hassle Free Orders\n$name,',
               style: TextStyle(
@@ -80,79 +77,111 @@ class _CustHomeState extends State<CustHome> {
             ),
           ),
           leading: Padding(
-            padding: EdgeInsets.only(left: 10), // Adjust the left padding as needed
+            padding: EdgeInsets.only(left: 10),
             child: IconButton(
               color: Color(0xFF040404),
               iconSize: 35,
               onPressed: () {
-                Navigator.of(context).push(Right_Animation(child: SecondPage(),
-                    direction: AxisDirection.left));
+                Navigator.of(context).push(Right_Animation(
+                    child: SecondPage(), direction: AxisDirection.left));
               },
               icon: const Icon(Icons.account_circle_outlined),
             ),
           ),
-          backgroundColor: Colors.white, // Your original background color
+          backgroundColor: Colors.white,
           flexibleSpace: Container(
             width: 350,
-            child:Divider(
+            child: Divider(
               height: 20,
               color: Color(0xFFEFEBEB),
             ),
-            // decoration: BoxDecoration(
-            //   gradient: LinearGradient(
-            //     colors: [Color(0xFFEC7142), Color(0xffedeaea)],
-            //     begin: Alignment.topCenter,
-            //     end: Alignment.bottomCenter,
-            //   ),
-            // ),
           ),
         ),
       ),
-
-
       body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: 15.0),
-                  Padding(
-                    padding: EdgeInsetsDirectional.fromSTEB(19, 20, 0, 20),
-                    child: Text(
-                        'Current Orders',
-                        style: TextStyle(
-                          // fontFamily: 'Readex Pro',
-                          color: Color(0xFF040404),
-                          fontSize: 30,
-                        ),
-                      ),
+          Column(
+            children: [
+              Container(
+                padding: EdgeInsets.all(12),
+                alignment: Alignment.centerLeft,
+                child: Center(
+                  child: Text(
+                    'Current Orders',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
                   ),
-
-                  SizedBox(height: 10.0),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    itemCount: 10,
-                    itemBuilder: (BuildContext context, int index) {
-                      return ListTile(
-                        title: Text('Order ${index + 1}'),
-                        subtitle: Text('Order Details for Order ${index + 1}'),
-                        trailing: IconButton(
-                          icon: Icon(Icons.info),
-                          onPressed: () {
-                            // Handle action for order details
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                  SizedBox(height: 150.0),
-                ],
+                ),
               ),
-            ),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: _ordersStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Something went wrong'));
+                    }
+
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    }
+
+                    final orders = snapshot.data!.docs;
+
+                    if (orders.isEmpty) {
+                      return Center(child: Text('No orders yet'));
+                    }
+
+                    return ListView.builder(
+                      itemCount: orders.length,
+                      itemBuilder: (context, index) {
+                        final orderData = orders[index].data() as Map<String, dynamic>;
+
+                        if (orderData['status'] == 'Delivered') {
+                          // Show dialog and move order to history
+                          WidgetsBinding.instance.addPostFrameCallback((_) async {
+                            await showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text('Order Delivered'),
+                                content: Text('Your order has been delivered.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: Text('OK'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            // Move the order to the history collection
+                            FirebaseFirestore.instance
+                                .collection('User')
+                                .doc(user?.uid)
+                                .collection('orderHistory')
+                                .doc(orders[index].id)
+                                .set(orderData);
+
+                            // Delete the order from the current orders
+                            FirebaseFirestore.instance
+                                .collection('orders')
+                                .doc(orders[index].id)
+                                .delete();
+                          });
+                        }
+
+                        return OrderCard(
+                          orderData: orderData,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              SizedBox(height: 120,),
+            ],
           ),
           Positioned(
             bottom: 0,
@@ -170,13 +199,6 @@ class _CustHomeState extends State<CustHome> {
                     bottomLeft: Radius.zero,
                     bottomRight: Radius.zero,
                   ),
-                  // boxShadow: [
-                  //   BoxShadow(
-                  //     // color: Color(0xFFF9D276),
-                  //     spreadRadius: 0,
-                  //     blurRadius: 20,
-                  //   )
-                  // ],
                 ),
                 child: Column(
                   children: [
@@ -217,6 +239,105 @@ class _CustHomeState extends State<CustHome> {
     );
   }
 }
+
+class OrderCard extends StatelessWidget {
+  final Map<String, dynamic> orderData;
+
+  const OrderCard({
+    Key? key,
+    required this.orderData,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final String restoName = orderData['restoName'];
+    final double totalAmount = orderData['totalAmount'] ?? 0.0;
+    final Map<String, dynamic> items = orderData['items'];
+    final String additionalNote = orderData['additionalNote'] ?? '';
+    final String status = orderData['status'] ?? 'Pending';
+
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      elevation: 5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Padding(
+        padding: EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Restaurant Name: $restoName',
+              style: TextStyle(fontSize: 16),
+            ),
+            Text(
+              'Total Amount: ₹${totalAmount.toStringAsFixed(2)}',
+              style: TextStyle(fontSize: 16),
+            ),
+            Text(
+              'Additional Note: $additionalNote',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Items:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            ...items.entries.map((entry) {
+              final itemName = entry.key;
+              final itemData = entry.value as Map<String, dynamic>;
+              final count = itemData['count'];
+              final price = itemData['price'];
+
+              return Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$itemName - Count: $count, Price: ₹$price'),
+                  ],
+                ),
+              );
+            }).toList(),
+            SizedBox(height: 8),
+            Text(
+              'Status: $status',
+              style: TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class FirestoreService {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  Stream<QuerySnapshot> fetchUserOrders() {
+    // Get the current user
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      // Get the current user's document ID
+      String userId = user.uid;
+
+      // Reference to the Order collection
+      CollectionReference orders =
+      FirebaseFirestore.instance.collection('orders');
+
+      // Return a stream of orders where the userId matches the current user's document ID
+      return orders.where('userId', isEqualTo: userId).snapshots();
+    } else {
+      // If user is not logged in, return an empty stream
+      return Stream.empty();
+    }
+  }
+}
+
+
+
+// --------------------------------------------------------------------SecondPage------------------------------------------------------------------------------------------------
 
 class SecondPage extends StatefulWidget {
   const SecondPage({super.key});

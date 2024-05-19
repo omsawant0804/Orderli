@@ -36,27 +36,6 @@ class RestoBackend{
   }
 
 
-  // Future<void> addRestaurant(String? name, String? email) async {
-  //   try {
-  //     User? user = FirebaseAuth.instance.currentUser;
-  //     String? documentId = user?.uid;
-  //
-  //     // Add new restaurant document to Firestore
-  //     await _firestore.collection('Restaurant').doc(documentId).set({
-  //       'Name': name,
-  //       'Email': email,
-  //       // Add other restaurant data fields as needed
-  //     }).then((value) {
-  //       // After adding successfully, navigate to restaurant's home screen
-  //       Get.offAll(RestaurantHomePage());
-  //     });
-  //   } catch (error) {
-  //     print('Error adding restaurant: $error');
-  //     // Handle error
-  //   }
-  // }
-
-
   Future<void> addRestaurant(String? name, String? email) async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
@@ -70,18 +49,42 @@ class RestoBackend{
         'Email': email,
         // Add other restaurant data fields as needed
       });
-
-      // Create subcollection "Menu" with auto-generated document IDs
-      // CollectionReference menuRef = restaurantRef.collection('Menu');
-      // await menuRef.add({
-      //   // You can add initial menu items or other data here if needed
-      // });
-
-      // After adding successfully, navigate to restaurant's home screen
       Get.offAll(RestaurantHomePage());
     } catch (error) {
       print('Error adding restaurant: $error');
       // Handle error
+    }
+  }
+
+
+  Future<Map<String, dynamic>> getRestoData() async {
+    try {
+      // Get current user from Firebase Authentication
+      User? user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        // Get user document ID
+        String documentId = user.uid;
+        print(documentId);
+
+        // Get document snapshot from Firestore
+        DocumentSnapshot documentSnapshot =
+        await _firestore.collection('Restaurant').doc(documentId).get();
+
+        // Check if document exists
+        if (documentSnapshot.exists) {
+          // Return user data as a map
+          return documentSnapshot.data() as Map<String, dynamic>;
+        } else {
+          throw Exception('Document does not exist');
+        }
+      } else {
+        throw Exception('User is not logged in');
+      }
+    } catch (error) {
+      print('Error getting user data: $error');
+      // Handle error
+      throw error;
     }
   }
 

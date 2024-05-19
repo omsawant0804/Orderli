@@ -1,18 +1,25 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-void main() {
-  runApp(MaterialApp(
-    home: CustomerMenuPage(),
-  ));
-}
+import 'package:orderli2/RestoSide/paymentGateway.dart';
+import 'package:orderli2/Weight/Right_Animation.dart';
+import '../CustomerSide/CustomerHome.dart';
 
 class CustomerMenuPage extends StatefulWidget {
+  String restoId="";
+  CustomerMenuPage(String restoId){
+    this.restoId=restoId;
+  }
   @override
-  _CustomerMenuPageState createState() => _CustomerMenuPageState();
+  _CustomerMenuPageState createState() => _CustomerMenuPageState(restoId);
 }
 
 class _CustomerMenuPageState extends State<CustomerMenuPage> {
+  String restoId="";
+  _CustomerMenuPageState(String restoId){
+    this.restoId=restoId;
+    print(restoId);
+  }
   Map<String, int> _selectedItems = {};
   Map<String, double> _itemPrices = {};
 
@@ -25,7 +32,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
   void _fetchItemPrices() async {
     QuerySnapshot querySnapshot = await FirebaseFirestore.instance
         .collection('Restaurant')
-        .doc('restaurantId123') // Replace with actual restaurant ID
+        .doc(restoId) // Replace with actual restaurant ID
         .collection('Menu')
         .get();
 
@@ -37,19 +44,148 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
     setState(() {});
   }
 
+  void callBackendPay(double totalAmount){
+    Razc razc = Razc(context);
+    razc.openCheckout(totalAmount);
+  }
+
+
+  void _placeOrder(BuildContext context,String Phno, String userId, String userName, String restoId, String restoName, int selectedTable, String additionalNote, double totalAmount) async {
+    CollectionReference ordersCollection = FirebaseFirestore.instance
+        .collection('orders'); // Separate collection for orders
+      print(_itemPrices);
+      print(_selectedItems);
+    Map<String, dynamic> orderData = {
+      'userId': userId, // Add user ID
+      'userName': userName, // Add user name
+      'restoId': restoId, // Add restaurant ID
+      'restoName': restoName, // Add restaurant name
+      'selectedTable': selectedTable,
+      'additionalNote': additionalNote,
+      'totalAmount': totalAmount,
+      'userPhonenumber':Phno,
+      'status':"Pending..",
+      'items': _selectedItems.map((key, value) {
+        return MapEntry(key, {
+          'count': value,
+          'price': _itemPrices[key],
+        });
+      }),
+      'timestamp': Timestamp.now(),
+    };
+
+    await ordersCollection.add(orderData);
+
+    setState(() {
+      _selectedItems.clear();
+      selectedTable = 1;
+      additionalNote = '';
+    });
+
+    // Navigator.pop(context); // Close the bottom sheet
+    print("hello");
+    // Create an instance of Razc and call openCheckout
+    // Razc razc = Razc(context);
+    // razc.openCheckout(totalAmount);
+
+
+
+
+
+  }
+
+  String getCurrentUserId() {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      return user.uid;
+    } else {
+      // Handle case where user is not signed in
+      return '';
+    }
+  }
+
+  Future<String> getCurrentUserName() async {
+    String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (userId.isNotEmpty) {
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance.collection('User').doc(userId).get();
+      if (userSnapshot.exists) {
+        return userSnapshot['Name'] ?? ''; // Assuming the user's name field is named 'name' in Firestore
+      }
+    }
+    return ''; // Return empty string if user ID is not available or user document does not exist
+  }
+
+  Future<String> getCurrentUserPhno() async {
+    String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (userId.isNotEmpty) {
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance.collection('User').doc(userId).get();
+      if (userSnapshot.exists) {
+        return userSnapshot['phnoNumber'] ?? ''; // Assuming the user's name field is named 'name' in Firestore
+      }
+    }
+    return ''; // Return empty string if user ID is not available or user document does not exist
+  }
+
+  Future<String> getRestoName(String restoId) async {
+    DocumentSnapshot restoSnapshot = await FirebaseFirestore.instance.collection('Restaurant').doc(restoId).get();
+    if (restoSnapshot.exists) {
+      return restoSnapshot['Name'] ?? ''; // Assuming the restaurant name field is named 'name' in Firestore
+    }
+    return ''; // Return empty string if restaurant document does not exist or name field is not available
+  }
+
+  GetPlaceOrderData(BuildContext context,int selectedTable, String additionalNote, double totalAmount)async{
+    String userId=getCurrentUserId();
+    String userName=await getCurrentUserName();
+    String restoName= await getRestoName(restoId);
+    String Phno=await getCurrentUserPhno();
+   _placeOrder(context,Phno, userId, userName, restoId, restoName, selectedTable, additionalNote, totalAmount);
+
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Menu'),
+      appBar:  PreferredSize(
+        preferredSize: Size.fromHeight(50),
+        child: AppBar(
+          centerTitle: true,
+          title: Padding(
+            padding: EdgeInsets.only(left: 0), // Adjust the left padding as needed
+            child: Text(
+              'Menu',
+              style: TextStyle(
+                fontFamily: 'Readex Pro',
+                color: Color(0xFF040404),
+                fontSize: 20,
+              ),
+            ),
+          ),
+          leading: Padding(
+            padding: EdgeInsets.only(left: 10), // Adjust the left padding as needed
+            child: IconButton(
+              color: Color(0xFF040404),
+              iconSize: 25,
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(Right_Animation(child: CustHome(),
+                    direction: AxisDirection.right));
+
+              },
+              icon: const Icon(Icons.arrow_back_ios),
+            ),
+          ),
+          backgroundColor: Colors.white, // Your original background color
+        ),
       ),
       body: _itemPrices.isEmpty
           ? Center(child: CircularProgressIndicator())
           : StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
-            .collection('restaurants')
-            .doc('restaurantId123') // Replace with actual restaurant ID
-            .collection('menu')
+            .collection('Restaurant')
+            .doc(restoId) // Replace with actual restaurant ID
+            .collection('Menu')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -286,14 +422,17 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                     Center(
                       child: ElevatedButton(
                         onPressed: () {
+                          GetPlaceOrderData(context, selectedTable, additionalNote, totalAmount);
+                          callBackendPay(totalAmount);
                           // Handle placing the order here
-                          setState(() {
-                            // Reset all values
-                            _selectedItems.clear();
-                            selectedTable = 1;
-                            additionalNote = '';
-                          });
-                          Navigator.pop(context); // Close the bottom sheet
+                          // setState(() {
+                          //   // Reset all values
+                          //   _selectedItems.clear();
+                          //   selectedTable = 1;
+                          //   additionalNote = '';
+                          // });
+                          Navigator.pop(context);
+                          // Close the bottom sheet
                         },
                         child: Text(
                           'Place Orde',
